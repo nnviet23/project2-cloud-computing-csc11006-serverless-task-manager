@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tiny List</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>Quản Lý Công Việc</h1>
+        </header>
+
+        <section class="task-form-section">
+            <h2>Thêm Công Việc Mới</h2>
+            <form id="taskForm">
+                <input type="hidden" id="taskId">
+                <div class="form-group">
+                    <input type="text" id="title" placeholder="Tên công việc" required>
+                </div>
+                <div class="form-group">
+                    <textarea id="description" placeholder="Mô tả chi tiết"></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <select id="priority" required>
+                            <option value="low">Thấp (Low)</option>
+                            <option value="medium">Trung bình (Medium)</option>
+                            <option value="high">Cao (High)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <input type="date" id="dueDate" required>
+                    </div>
+                </div>
+                <button type="submit" id="submitBtn">Lưu Công Việc</button>
+            </form>
+        </section>
+
+        <section class="filters-section">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="filterPriority">Lọc theo Độ ưu tiên:</label>
+                    <select id="filterPriority">
+                        <option value="all">Tất cả</option>
+                        <option value="low">Thấp</option>
+                        <option value="medium">Trung bình</option>
+                        <option value="high">Cao</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="filterDate">Lọc theo Ngày hạn:</label>
+                    <input type="date" id="filterDate">
+                </div>
+                <div class="form-group align-bottom">
+                    <button id="clearFiltersBtn">Xóa Lọc</button>
+                </div>
+            </div>
+        </section>
+
+        <section class="task-list-section">
+            <ul id="taskList" class="task-list">
+            </ul>
+        </section>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
