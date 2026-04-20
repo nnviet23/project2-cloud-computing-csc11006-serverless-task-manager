@@ -1,0 +1,10 @@
+# Bỏ qua thư viện Node.js
+node_modules/
+
+# Bỏ qua các file log và môi trường
+npm-debug.log*
+.env
+
+# Bỏ qua file rác của hệ điều hành
+.DS_Store
+Thumbs.db
