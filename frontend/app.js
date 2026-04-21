@@ -6,8 +6,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const clearFiltersBtn = document.getElementById('clearFiltersBtn');
 
     let tasks = [];
-    const API_URL = 'http://localhost:3000/tasks';
-
+    //const API_URL = 'https://w88o3mc6b1.execute-api.us-east-1.amazonaws.com/prod/tasks';
+    const API_URL = 'http://localhost:3000/tasks'; // Dùng cho local development
     // 1. Gọi API lấy dữ liệu từ Backend
     async function fetchTasks() {
         try {
