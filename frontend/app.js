@@ -6,8 +6,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const clearFiltersBtn = document.getElementById('clearFiltersBtn');
 
     let tasks = [];
-    //const API_URL = 'https://w88o3mc6b1.execute-api.us-east-1.amazonaws.com/prod/tasks';
-    const API_URL = 'http://localhost:3000/tasks'; // Dùng cho local development
+    const API_URL = 'https://if4seakx84.execute-api.us-east-1.amazonaws.com/prod/tasks'; // Dùng URL API Gateway sau khi deploy lên AWS Lambda
+    
+    //const API_URL = 'http://localhost:3000/tasks'; // Dùng cho local development
     // 1. Gọi API lấy dữ liệu từ Backend
     async function fetchTasks() {
         try {
@@ -45,7 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const isOverdue = task.status === 'pending' && task.dueDate < today;
 
             const li = document.createElement('li');
-            li.className = `task-item ${task.status === 'completed' ? 'task-completed' : ''} ${isOverdue ? 'task-overdue' : ''}`;
+            li.className = `task-item ${task.status === 'done' ? 'task-completed' : ''} ${isOverdue ? 'task-overdue' : ''}`;
             
             li.innerHTML = `
                 <div class="task-details">
@@ -111,7 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const task = tasks.find(t => t.taskId === id);
         if(task) {
             try {
-                const updatedTask = { ...task, status: 'completed' };
+                const updatedTask = { ...task, status: 'done' };
                 await fetch(`${API_URL}/${id}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
