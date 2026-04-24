@@ -1,3 +1,4 @@
+const crypto = require('crypto'); // Đã sửa lỗi import gây sập Lambda
 const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
 const {
     DynamoDBDocumentClient,
@@ -12,10 +13,10 @@ const client = new DynamoDBClient({});
 const dynamo = DynamoDBDocumentClient.from(client);
 const TABLE_NAME = 'TasksTable';
 
-// Cấu hình CORS cực kỳ quan trọng để Frontend gọi được API
+// Cấu hình CORS cực kỳ quan trọng (Đã bỏ dấu gạch chéo / ở cuối link)
 const headers = {
     'Content-Type': 'application/json',
-    'Access-Control-Allow-Origin': '*', // Ở đồ án thực tế có thể thay bằng link CloudFront của bạn
+    'Access-Control-Allow-Origin': 'https://drj7otpqp57zn.cloudfront.net', 
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type'
 };
@@ -45,7 +46,7 @@ exports.handler = async (event) => {
                 const requestBody = JSON.parse(event.body);
                 const newTask = {
                     ...requestBody,
-                    taskId: Date.now().toString(), // Tạo ID
+                    taskId: crypto.randomUUID(), // Tạo ID chuẩn UUID
                     createdAt: new Date().toISOString()
                 };
                 await dynamo.send(new PutCommand({
@@ -85,11 +86,10 @@ exports.handler = async (event) => {
         body = { error: err.message };
     }
 
+    // Đã sửa lại để sử dụng đúng biến statusCode và headers
     return {
-        "statusCode": 200,
-        "headers": {
-            "Access-Control-Allow-Origin": "*"
-        },
+        statusCode: statusCode, 
+        headers: headers,       
         body: JSON.stringify(body)
     };
 };

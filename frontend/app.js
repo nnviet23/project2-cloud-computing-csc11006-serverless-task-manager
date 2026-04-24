@@ -6,9 +6,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const clearFiltersBtn = document.getElementById('clearFiltersBtn');
 
     let tasks = [];
-    const API_URL = 'https://if4seakx84.execute-api.us-east-1.amazonaws.com/prod/tasks'; // Dùng URL API Gateway sau khi deploy lên AWS Lambda
-    
-    //const API_URL = 'http://localhost:3000/tasks'; // Dùng cho local development
+    const API_URL = 'https://2894wocicl.execute-api.us-east-1.amazonaws.com/prod/tasks';
+
     // 1. Gọi API lấy dữ liệu từ Backend
     async function fetchTasks() {
         try {
@@ -46,7 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const isOverdue = task.status === 'pending' && task.dueDate < today;
 
             const li = document.createElement('li');
-            li.className = `task-item ${task.status === 'done' ? 'task-completed' : ''} ${isOverdue ? 'task-overdue' : ''}`;
+            li.className = `task-item ${task.status === 'completed' ? 'task-completed' : ''} ${isOverdue ? 'task-overdue' : ''}`;
             
             li.innerHTML = `
                 <div class="task-details">
@@ -56,7 +55,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         ${isOverdue ? '<span class="badge-overdue">TRỄ HẠN!</span>' : ''}
                     </h3>
                     <p>${task.description}</p>
-                    <div class="task-meta">Hạn: ${formatDate(task.dueDate)} | Trạng thái: ${task.status === 'pending' ? 'Chưa xong' : 'Đã xong'}</div>
+
+                    <div class="task-meta">
+                        Phụ trách: <strong>${task.userId}</strong> | Hạn: ${formatDate(task.dueDate)} | Trạng thái: ${task.status === 'pending' ? 'Chưa xong' : 'Đã xong'}
+                    </div>
+
                 </div>
                 <div class="task-actions">
                     ${task.status === 'pending' ? `<button class="btn-done" onclick="completeTask('${task.taskId}')">Xong</button>` : ''}
@@ -79,7 +82,7 @@ document.addEventListener('DOMContentLoaded', () => {
             priority: document.getElementById('priority').value,
             dueDate: document.getElementById('dueDate').value,
             status: 'pending',
-            userId: 'user123' 
+            userId: document.getElementById('userId').value // Lấy ID thật từ ô input 
         };
 
         try {
@@ -112,7 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const task = tasks.find(t => t.taskId === id);
         if(task) {
             try {
-                const updatedTask = { ...task, status: 'done' };
+                const updatedTask = { ...task, status: 'completed' };
                 await fetch(`${API_URL}/${id}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
@@ -148,6 +151,8 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('priority').value = task.priority;
         document.getElementById('dueDate').value = task.dueDate;
         
+        document.getElementById('userId').value = task.userId || '';
+
         document.getElementById('submitBtn').innerText = 'Cập Nhật';
         window.scrollTo(0,0);
     }
