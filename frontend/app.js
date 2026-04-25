@@ -4,46 +4,97 @@ document.addEventListener('DOMContentLoaded', () => {
     const filterPriority = document.getElementById('filterPriority');
     const filterDate = document.getElementById('filterDate');
     const clearFiltersBtn = document.getElementById('clearFiltersBtn');
+    const submitBtn = document.getElementById('submitBtn');
 
     let tasks = [];
+    
+    // Cập nhật địa chỉ API Gateway
+
+    // Dùng URL cục bộ khi chạy Backend trên localhost
+    // const API_URL = 'https://localhost:3000';
+
+    // const API_URL = 'https://your-api-id.execute-api.region.amazonaws.com/prod/tasks';
     const API_URL = 'https://2894wocicl.execute-api.us-east-1.amazonaws.com/prod/tasks';
 
-    // 1. Gọi API lấy dữ liệu từ Backend
-    async function fetchTasks() {
-        try {
-            const response = await fetch(API_URL);
-            tasks = await response.json();
-            renderTasks();
-        } catch (error) {
-            console.error('Lỗi khi gọi API:', error);
+    // Hiển thị thông báo cho người dùng
+    function showMessage(message, isError = false) {
+        if (isError) {
+            console.error("Hệ thống báo lỗi:", message);
+            alert(`LỖI: ${message}`);
+        } else {
+            console.log("Thành công:", message);
+            alert(message); 
         }
     }
 
-    // 2. Hàm định dạng ngày tháng (dd/mm/yyyy)
+    // Hàm gọi API và xử lý phản hồi
+    async function fetchAPI(endpoint, method = 'GET', bodyData = null) {
+        const options = {
+            method: method,
+            headers: { 'Content-Type': 'application/json' }
+        };
+        if (bodyData) {
+            options.body = JSON.stringify(bodyData);
+        }
+
+        try {
+            const response = await fetch(endpoint, options);
+            
+            // Xử lý mã trạng thái lỗi từ Backend
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => null);
+                const errorMsg = errorData ? (errorData.error || errorData.details) : `Mã lỗi HTTP ${response.status}`;
+                throw new Error(errorMsg);
+            }
+
+            return await response.json();
+        } catch (error) {
+            // Xử lý ngoại lệ mạng và lỗi ném ra từ API
+            showMessage(error.message, true);
+            throw error;
+        }
+    }
+
+    // 1. Lấy dữ liệu công việc từ Backend
+    async function fetchTasks() {
+        taskList.innerHTML = '<p style="text-align:center; color:#666;">Đang tải dữ liệu...</p>';
+        try {
+            tasks = await fetchAPI(API_URL, 'GET');
+            renderTasks();
+        } catch (error) {
+            taskList.innerHTML = '<p style="text-align:center; color:red;">Lỗi không thể tải danh sách công việc.</p>';
+        }
+    }
+
+    // 2. Định dạng ngày tháng (dd/mm/yyyy)
     function formatDate(dateString) {
         if (!dateString) return "";
         const [year, month, day] = dateString.split("-");
         return `${day}/${month}/${year}`;
     }
 
-    // 3. Hàm hiển thị danh sách (Bao gồm bộ lọc và kiểm tra trễ hạn)
+    // 3. Hiển thị danh sách công việc
     function renderTasks() {
         taskList.innerHTML = '';
-        const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+        const today = new Date().toISOString().split('T')[0];
         const prioFilter = filterPriority.value;
         const dateFilter = filterDate.value;
 
-        // Lọc task trước
+        // Áp dụng bộ lọc
         const filteredTasks = tasks.filter(task => {
             const matchPrio = prioFilter === 'all' || task.priority === prioFilter;
             const matchDate = dateFilter === '' || task.dueDate === dateFilter;
             return matchPrio && matchDate;
         });
 
-        // Đổ dữ liệu đã lọc ra màn hình
+        if (filteredTasks.length === 0) {
+            taskList.innerHTML = '<p style="text-align:center; color:#666;">Chưa có công việc nào.</p>';
+            return;
+        }
+
+        // Tạo giao diện cho từng công việc
         filteredTasks.forEach(task => {
             const isOverdue = task.status === 'pending' && task.dueDate < today;
-
             const li = document.createElement('li');
             li.className = `task-item ${task.status === 'completed' ? 'task-completed' : ''} ${isOverdue ? 'task-overdue' : ''}`;
             
@@ -54,12 +105,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         <span class="priority-${task.priority}">[${task.priority}]</span>
                         ${isOverdue ? '<span class="badge-overdue">TRỄ HẠN!</span>' : ''}
                     </h3>
-                    <p>${task.description}</p>
-
+                    <p>${task.description || '<i style="color:#aaa;">Không có mô tả</i>'}</p>
                     <div class="task-meta">
                         Phụ trách: <strong>${task.userId}</strong> | Hạn: ${formatDate(task.dueDate)} | Trạng thái: ${task.status === 'pending' ? 'Chưa xong' : 'Đã xong'}
                     </div>
-
                 </div>
                 <div class="task-actions">
                     ${task.status === 'pending' ? `<button class="btn-done" onclick="completeTask('${task.taskId}')">Xong</button>` : ''}
@@ -71,9 +120,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 4. Submit form (Thêm mới hoặc Cập nhật) gọi API
+    // 4. Xử lý sự kiện submit form (Thêm/Sửa)
     taskForm.addEventListener('submit', async (e) => {
         e.preventDefault();
+        
+        // Vô hiệu hóa nút bấm trong khi xử lý
+        submitBtn.disabled = true;
+        submitBtn.innerText = 'Đang xử lý...';
         
         const taskId = document.getElementById('taskId').value;
         const taskData = {
@@ -82,65 +135,63 @@ document.addEventListener('DOMContentLoaded', () => {
             priority: document.getElementById('priority').value,
             dueDate: document.getElementById('dueDate').value,
             status: 'pending',
-            userId: document.getElementById('userId').value // Lấy ID thật từ ô input 
+            userId: document.getElementById('userId').value
         };
 
         try {
             if (taskId) {
-                // Update (PUT)
-                await fetch(`${API_URL}/${taskId}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(taskData)
-                });
-                document.getElementById('taskId').value = '';
-                document.getElementById('submitBtn').innerText = 'Lưu Công Việc';
+                // Cập nhật công việc hiện có
+                await fetchAPI(`${API_URL}/${taskId}`, 'PUT', taskData);
+                showMessage("Đã cập nhật công việc!");
             } else {
-                // Create (POST)
-                await fetch(API_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(taskData)
-                });
+                // Thêm công việc mới
+                await fetchAPI(API_URL, 'POST', taskData);
+                showMessage("Thêm công việc thành công!");
             }
+            
+            // Đặt lại trạng thái form
             taskForm.reset();
-            fetchTasks(); // Tải lại danh sách từ Backend
+            document.getElementById('taskId').value = '';
+            submitBtn.innerText = 'Lưu Công Việc';
+            
+            fetchTasks();
         } catch (error) {
-            console.error('Lỗi khi lưu công việc:', error);
+            // Xử lý lỗi đã được thực hiện trong hàm fetchAPI
+        } finally {
+            // Khôi phục trạng thái nút bấm
+            submitBtn.disabled = false;
+            if(!document.getElementById('taskId').value) submitBtn.innerText = 'Lưu Công Việc';
         }
     });
 
-    // 5. Nút Hoàn thành task (Gọi API PUT cập nhật trạng thái)
+    // 5. Đánh dấu hoàn thành công việc
     window.completeTask = async function(id) {
         const task = tasks.find(t => t.taskId === id);
         if(task) {
             try {
                 const updatedTask = { ...task, status: 'completed' };
-                await fetch(`${API_URL}/${id}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(updatedTask)
-                });
-                fetchTasks(); // Cập nhật lại UI
+                await fetchAPI(`${API_URL}/${id}`, 'PUT', updatedTask);
+                fetchTasks();
             } catch (error) {
-                console.error('Lỗi khi cập nhật trạng thái:', error);
+                // Xử lý lỗi đã được thực hiện trong hàm fetchAPI
             }
         }
     }
 
-    // 6. Xóa task (Gọi API DELETE)
+    // 6. Xóa công việc
     window.deleteTask = async function(id) {
-        if(confirm('Bạn có chắc muốn xóa công việc này?')) {
+        if(confirm('Bạn có chắc muốn xóa công việc này? Hành động này không thể hoàn tác.')) {
             try {
-                await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
-                fetchTasks(); // Tải lại UI sau khi xóa
+                await fetchAPI(`${API_URL}/${id}`, 'DELETE');
+                showMessage("Đã xóa công việc!");
+                fetchTasks();
             } catch (error) {
-                console.error('Lỗi khi xóa:', error);
+                // Xử lý lỗi đã được thực hiện trong hàm fetchAPI
             }
         }
     }
 
-    // 7. Sửa task (Đưa dữ liệu lên Form)
+    // 7. Điền thông tin công việc lên form để sửa
     window.editTask = function(id) {
         const task = tasks.find(t => t.taskId === id);
         if(!task) return;
@@ -150,14 +201,15 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('description').value = task.description;
         document.getElementById('priority').value = task.priority;
         document.getElementById('dueDate').value = task.dueDate;
-        
         document.getElementById('userId').value = task.userId || '';
 
         document.getElementById('submitBtn').innerText = 'Cập Nhật';
-        window.scrollTo(0,0);
+        
+        // Cuộn màn hình lên khu vực form
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    // Các sự kiện cho Bộ lọc
+    // Xử lý các sự kiện cho bộ lọc
     filterPriority.addEventListener('change', renderTasks);
     filterDate.addEventListener('change', renderTasks);
     clearFiltersBtn.addEventListener('click', () => {
@@ -166,6 +218,6 @@ document.addEventListener('DOMContentLoaded', () => {
         renderTasks();
     });
 
-    // Load dữ liệu lần đầu khi vào trang
+    // Tải dữ liệu khi khởi tạo trang
     fetchTasks();
 });
